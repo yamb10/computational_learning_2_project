@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from collections import OrderedDict
 
 class ByLayerModel(nn.Module):
     def __init__(self, sequence, names=None):
@@ -17,5 +18,5 @@ class ByLayerModel(nn.Module):
         if self.names is None:
             return res
         else:
-            return {name: r for name, r in zip(self.names, res)}
+            return OrderedDict({name: r for name, r in zip(self.names, res)})
     
