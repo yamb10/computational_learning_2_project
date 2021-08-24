@@ -1,3 +1,4 @@
+from ast import dump
 import torch
 from torchvision.models import vgg19
 from torchvision import transforms
@@ -11,8 +12,11 @@ from model import ByLayerModel
 from PIL import Image
 
 import os
+from functools import reduce
+from datetime import datetime
+import json
 
-
+import torch.multiprocessing as mp
 
 def load_image(path):
     image = Image.open(path)
@@ -25,19 +29,19 @@ def gram_matrix(A):
     """
     A - Tensor
     """
-    _, a, b, c = A.size()  # a=batch size(=1)
+    bs, a, b, c = A.size()
     # b=number of feature maps
     # (c,d)=dimensions of a f. map (N=c*d)
 
-    features = A.view(a ,b * c)  # resise F_XL into \hat F_XL
+    features = A.view(bs, a ,b * c)  # resise F_XL into \hat F_XL
 
-    G = torch.mm(features, features.t())  # compute the gram product
+    G = torch.bmm(features, features.transpose(1, 2))  # compute the gram product
 
     # we 'normalize' the values of the gram matrix  \\\\ Yam's comment: why tf would you do that????? the def is called Gram matrix not 'normalized Gram matrix' -_-
     # by dividing by the number of element in each feature maps.
     return G  # .div(a * b * c )
 
-def compute_style_loss(P, F):
+def compute_style_loss(P, F, weights=None):
     """
     names of variables are uninformative, but follow the notation in the Gatys paper.
     P - list. a genereted vector of tensor of layers *batch size* num of filter* size of filter 
@@ -45,16 +49,18 @@ def compute_style_loss(P, F):
         P contains the results of applying the net to the **original** image.
 
     F - list. similar to F, but applied on the **generated** image.
+    weights - a manual rescaling weight given to each layer. If given, has to be a Tensor of size len(P)
     """
     
     num_layers = len(P)
-    w=torch.ones(num_layers, device=P[0].device)/num_layers
+    if weights is None:
+        weights=torch.ones(num_layers, device=P[0].device)/num_layers
     loss = 0
     for l in range(num_layers):
         p, f = P[l], F[l]
         _, c, d, e = p.size()
         a, g = gram_matrix(p), gram_matrix(f) #check with batch size > 1
-        loss += w[l]* 1/((2*d*e*c)**2) * torch.linalg.norm(a-g) ** 2 
+        loss += weights[l]* 1/((2*d*e*c)**2) * torch.linalg.norm(a-g) ** 2 
     return loss
         
 
@@ -64,12 +70,16 @@ def compute_layer_content_loss(C, G):
     C-  list. a genereted vector of tensor of batch size* num of filter* size of filter 
     G-  list. a given vector of tensor of batch size* num of filter* size of filter 
     """
-    num_layers = len(C)
-    loss = 0  #  torch.zeros(batch_size, device=C.device)
-    for l in range(num_layers):
-        p, f = C[l], G[l]
-        loss += 1/2 * torch.linalg.norm(p-f) ** 2  # fixed the formula
-    return loss
+
+    # num_layers = len(C)
+    # loss = 0  #  torch.zeros(batch_size, device=C.device)
+    # for l in range(num_layers):
+    #     p, f = C[l], G[l]
+    #     loss += 1/2 * torch.linalg.norm(p-f) ** 2  # fixed the formula
+    # return loss
+
+    return sum(map(lambda x: torch.linalg.norm(x[0]-x[1]) ** 2, zip(C, G))) / 2
+
          
 
 def compute_loss(outputs, style_outputs, style_names, content_outputs, content_names, alpha, beta):
@@ -87,9 +97,9 @@ def compute_loss(outputs, style_outputs, style_names, content_outputs, content_n
     
 
 
-def train(ephoch_num, input_size, style_image, content_image, alpha=1, beta=1e2, device="cuda"):
+def train(ephoch_num, input_size, style_image, content_image, alpha=1, beta=1e2, device="cuda", random_starts=1, verbose=True):
 
-    inputs = torch.rand([1] + list(input_size), requires_grad=True, device=device)
+    inputs = torch.rand([random_starts] + list(input_size), requires_grad=True, device=device)
 
     layers = ["conv1_1", "relu1_1", "conv1_2","relu1_2", "maxpool1",
                                                          "conv2_1", "relu2_1", "conv2_2", "relu2_2", "maxpool2",
@@ -135,7 +145,7 @@ def train(ephoch_num, input_size, style_image, content_image, alpha=1, beta=1e2,
     style_outputs = splitted_model(style_image)
     content_outputs = splitted_model(content_image)
 
-    for epcoh_num in trange(ephoch_num):
+    for epcoh_num in trange(ephoch_num, disable=not verbose):
 
         outputs = splitted_model(normalize(inputs))
         
@@ -147,6 +157,7 @@ def train(ephoch_num, input_size, style_image, content_image, alpha=1, beta=1e2,
 
         optimizer.step()
         optimizer.zero_grad()
+
         with torch.no_grad():
             inputs.clamp_(0, 255)
         #     for i in inputs:
@@ -158,39 +169,83 @@ def train(ephoch_num, input_size, style_image, content_image, alpha=1, beta=1e2,
 
     return inputs, loss_values 
 
+def run_content_image(content_path):
+        for style_name in os.listdir(STYLE_FOLDER):
+ 
 
+            style_image = os.path.join(STYLE_FOLDER, style_name)
+            content_image = os.path.join(CONTENT_FOLDER, content_name)
+
+            style_image = load_image(style_image)
+            content_image = load_image(content_image)
+
+
+
+            inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, style_image, content_image, 
+                                        alpha=ALPHA, beta=BETA, random_starts=RANDOM_STARTS, verbose=False)
+
+            plt.rcParams["figure.figsize"] = (16, 9) 
+
+            plt.semilogy(np.arange(len(loss_values)) + 1, loss_values, label=f"{str(style_name)[:-4]}")
+            plt.legend()
+            plt.savefig(os.path.join(output_folder, f"{str(content_name)[:-4]}_loss.png"))
+            
+            # img = inputs.detach().cpu().numpy()
+
+            folder_name = os.path.join(output_folder, f"{str(content_name)[:-4]}", f"{str(style_name)[:-4]}")
+            os.makedirs(folder_name)
+
+            trasform = transforms.ToPILImage()
+
+            for i, t in enumerate(inputs):
+                
+                img = trasform(t)
+                img.save(os.path.join(folder_name, f"{i}.png"))
+
+    
+
+        plt.clf()
 
 
 
 
 
 if __name__ == "__main__":
-    EPOCH_NUM = 10000
+    EPOCH_NUM = 50000
     INPUT_SIZE = (3, 224, 224)
+    SEED = 7442
+    RANDOM_STARTS = 3
+    ALPHA = 1
+    BETA = 5e3
 
-    for style_name in  os.listdir("style_photos"):
-        for content_name in os.listdir("content"):
-
-
-            STYLE_IMAGE = os.path.join("style_photos", style_name)
-            CONTENT_IMAGE = os.path.join("content", content_name)
-
-            style_image = load_image(STYLE_IMAGE)
-            content_image = load_image(CONTENT_IMAGE)
+    configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
+                     "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA}
 
 
+    date = datetime.today()
 
-            inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, style_image, content_image)
+    output_folder = os.path.join("outputs_all", date.strftime("%Y-%m-%d"), date.strftime("%H:%M"))
 
-            plt.semilogy(np.arange(len(loss_values)) + 1, loss_values, label=f"{str(style_name)[:-4]}__{str(content_name)[:-4]}")
-            plt.legend()
-            plt.savefig('loss.png')
-            
-            # img = inputs.detach().cpu().numpy()
-            img = transforms.ToPILImage()(inputs.squeeze(0))
-            
-            img.save(f"outputs/{str(style_name)[:-4]}__{str(content_name)[:-4]}.png")
+    os.makedirs(output_folder)
 
-    
+    with open(os.path.join(output_folder, "configuration.json"), "w", encoding="utf-8") as f:
+        json.dump(configuration, f, ensure_ascii=False, indent=4)
 
-    
+    print(configuration)
+
+    torch.manual_seed(SEED)
+
+
+    CONTENT_FOLDER = "content"
+    STYLE_FOLDER = "style_photos"
+
+    procsesses = []
+
+    for content_name in tqdm(os.listdir(CONTENT_FOLDER)):
+        p = mp.Process(target=run_content_image, args=(run_content_image,))
+        p.start()
+        procsesses.append(p)
+
+
+    for p in procsesses:
+        p.join()    
