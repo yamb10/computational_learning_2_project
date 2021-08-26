@@ -65,24 +65,27 @@ def compute_style_loss(P, F, weights=None):
         
 
 
-def compute_layer_content_loss(C, G):  
+def compute_layer_content_loss(C, G, weights=None):  
     """
     C-  list. a genereted vector of tensor of batch size* num of filter* size of filter 
     G-  list. a given vector of tensor of batch size* num of filter* size of filter 
     """
 
-    # num_layers = len(C)
-    # loss = 0  #  torch.zeros(batch_size, device=C.device)
-    # for l in range(num_layers):
-    #     p, f = C[l], G[l]
-    #     loss += 1/2 * torch.linalg.norm(p-f) ** 2  # fixed the formula
-    # return loss
+    num_layers = len(C)
+    if weights is None:
+        weights = torch.ones(num_layers) / num_layers
 
-    return sum(map(lambda x: torch.linalg.norm(x[0]-x[1]) ** 2, zip(C, G))) / 2
+    loss = 0  #  torch.zeros(batch_size, device=C.device)
+    for l in range(num_layers):
+        p, f = C[l], G[l]
+        loss += weights[l] * torch.linalg.norm(p-f) ** 2  # fixed the formula
+    return loss / 2
+
+    # return sum(map(lambda x: torch.linalg.norm(x[0]-x[1]) ** 2, zip(C, G))) / 2
 
          
 
-def compute_loss(outputs, style_outputs, style_names, content_outputs, content_names, alpha, beta):
+def compute_loss(outputs, style_outputs, style_names, content_outputs, content_names, alpha, beta, style_weights=None, content_weights=None):
     """
 
     """
@@ -91,8 +94,13 @@ def compute_loss(outputs, style_outputs, style_names, content_outputs, content_n
     y_style = [style_outputs[key] for key in style_outputs.keys()  if key in style_names]
     y_con = [content_outputs[key] for key in content_outputs.keys() if key in content_names]
 
+    if style_weights is not None:
+        style_weights = [style_weights[key] for key in style_names.keys()]
+    if content_weights is not None:
+        content_weights = [content_weights[key] for key in content_outputs.keys()]
+
     
-    return alpha*compute_layer_content_loss(x_con,y_con) + beta*compute_style_loss(x_style, y_style)
+    return alpha*compute_layer_content_loss(x_con,y_con, weights=content_weights) + beta*compute_style_loss(x_style, y_style, weights=style_weights)
     
     
 
@@ -211,10 +219,10 @@ def run_content_image(content_path):
 
 
 if __name__ == "__main__":
-    EPOCH_NUM = 50000
+    EPOCH_NUM = 20000
     INPUT_SIZE = (3, 224, 224)
     SEED = 7442
-    RANDOM_STARTS = 3
+    RANDOM_STARTS = 1
     ALPHA = 1
     BETA = 5e3
 
