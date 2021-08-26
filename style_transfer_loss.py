@@ -7,14 +7,14 @@ class StyleTansferLoss(nn.Module):
         if style_weights is None:
             self.style_weights = torch.ones(len(style_layers), device=device, requires_grad=False) / len(style_layers)
         else:
-            content_weights = [content_weights[key]for key in content_layers.keys()]
+            style_weights = [style_weights[key] for key in style_layers]
             assert len(style_weights) == len(style_layers)
             self.style_weights = style_weights
         
         if content_weights is None:
             self.content_weights = torch.ones(len(content_layers), device=device, requires_grad=False) / len(content_layers)
         else:
-            style_weights = [style_weights[key] for key in style_layers.keys()]
+            content_weights = [content_weights[key] for key in content_layers]
             assert len(content_weights) == len(content_layers)
             self.content_weights = content_weights
         

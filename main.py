@@ -88,7 +88,7 @@ def run_content_image(content_image, style_images):
     # assert(set(style_names).issubset(set(layers)))
     # assert(set(content_names).issubset(set(layers)))
 
-    criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, alpha=ALPHA, beta=BETA, device=DEVICE)
+    criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
 
     for style_image in style_images:
 
@@ -152,14 +152,15 @@ def run(content_images, style_images):
 
 if __name__ == "__main__":
     EPOCH_NUM = 15000
-    INPUT_SIZE = (3, 224, 224)
+    INPUT_SIZE = (3, 512, 512)
     SEED = 7442
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 5e3
+    BETA = 5e7
     DEVICE = "cuda"
-    STYLE_NAMES = ["conv1_1", "conv2_1", "conv3_1", "conv4_1"]  #
-    CONTENT_NAMES = ["conv4_2"]
+    STYLE_NAMES = ["conv1_1", "conv2_1", "conv3_1", "conv4_1"]
+    CONTENT_NAMES = ["conv4_2", "conv5_2"]
+    CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     date = datetime.today()
 
     output_folder = os.path.join("outputs_all", date.strftime(
-        "%Y-%m-%d"), date.strftime("%H:%M"))
+        "%Y-%m-%d"), date.strftime("%H:%M:%s"))
 
     os.makedirs(output_folder)
 
