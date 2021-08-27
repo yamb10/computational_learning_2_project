@@ -13,7 +13,7 @@ import torch.multiprocessing as mp
 from by_layer_model import ByLayerModel
 from named_image import NamedImage
 from style_transfer_loss import StyleTansferLoss
-
+from total_variation_loss import TotalVariationLoss
 
 
 def train(ephoch_num, input_size, criterion, style_image, content_image, device="cuda", random_starts=1, verbose=True):
@@ -83,13 +83,26 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
     return inputs, loss_values
 
 
+def get_loss():
+    style_trasfer_loss = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
+                                                alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
+    if VARIATION_LAMBDA == 0:
+        return style_trasfer_loss
+    regularizer = TotalVariationLoss()
+    return lambda outputs, style_outputs, content_outputs: (style_trasfer_loss(outputs, style_outputs, content_outputs)
+                                                            + VARIATION_LAMBDA * regularizer(outputs))
+
+
+
+
+
 def run_content_image(content_image, style_images):
 
     # assert(set(style_names).issubset(set(layers)))
     # assert(set(content_names).issubset(set(layers)))
 
-    criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
-
+    criterion = get_loss()
+    
     for style_image in style_images:
 
         inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, criterion, style_image.image, content_image.image,
@@ -163,10 +176,13 @@ if __name__ == "__main__":
     CONTENT_NAMES = ["conv4_2", "conv5_2"]
     CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
 
+    VARIATION_LAMBDA = 0
+    
+
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
-                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS}
+                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, "variation lambda": VARIATION_LAMBDA}
 
     date = datetime.today()
 
