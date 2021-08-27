@@ -10,10 +10,13 @@ from datetime import datetime
 import json
 import torch.multiprocessing as mp
 
-from by_layer_model import ByLayerModel
+# from by_layer_model import ByLayerModel
+from style_vgg19 import StyleVGG19
 from named_image import NamedImage
 from style_transfer_loss import StyleTansferLoss
 from total_variation_loss import TotalVariationLoss
+
+
 
 
 def train(ephoch_num, input_size, criterion, style_image, content_image, device="cuda", random_starts=1, verbose=True):
@@ -21,19 +24,9 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
     inputs = torch.rand([random_starts] + list(input_size),
                         requires_grad=True, device=device)
 
-    layers = ["conv1_1", "relu1_1", "conv1_2", "relu1_2", "maxpool1",
-              "conv2_1", "relu2_1", "conv2_2", "relu2_2", "maxpool2",
-              "conv3_1", "relu3_1", "conv3_2", "relu3_2", "conv3_3",
-              "relu3_3", "conv3_4", "relu3_4", "maxpool3",
-              "conv4_1", "relu4_1", "conv4_2", "relu4_2", "conv4_3",
-              "relu4_3", "conv4_4", "relu4_4", "maxpool4",
-              "conv5_1", "relu5_1", "conv5_2", "relu5_2", "conv5_3",
-              "relu5_3", "conv5_4", "relu5_4", "maxpool5"]
-    model = vgg19(pretrained=True).to(device)
-    splitted_model = ByLayerModel(model.features, names=layers)
+    model = StyleVGG19(replace_pooling=REPLACE_POOLING).to(device)
+    regularizer = TotalVariationLoss()
 
-    for p in model.parameters():
-        p.requires_grad_(False)
 
     style_image.requires_grad_(False)
     content_image.requires_grad_(False)
@@ -54,14 +47,17 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
 
     optimizer = torch.optim.Adam([inputs], lr=5e-3)
 
-    style_outputs = splitted_model(style_image)
-    content_outputs = splitted_model(content_image)
+    style_outputs = model(style_image)
+    content_outputs = model(content_image)
 
     for epcoh_num in trange(ephoch_num, disable=not verbose):
 
-        outputs = splitted_model(normalize(inputs))
+        outputs = model(normalize(inputs))
 
         loss = criterion(outputs, style_outputs, content_outputs)
+
+        if VARIATION_LAMBDA == 0:
+            loss += VARIATION_LAMBDA * regularizer(inputs)
 
         loss.backward()
 
@@ -83,17 +79,6 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
     return inputs, loss_values
 
 
-def get_loss():
-    style_trasfer_loss = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
-                                                alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
-    if VARIATION_LAMBDA == 0:
-        return style_trasfer_loss
-    regularizer = TotalVariationLoss()
-    return lambda outputs, style_outputs, content_outputs: (style_trasfer_loss(outputs, style_outputs, content_outputs)
-                                                            + VARIATION_LAMBDA * regularizer(outputs))
-
-
-
 
 
 def run_content_image(content_image, style_images):
@@ -101,8 +86,10 @@ def run_content_image(content_image, style_images):
     # assert(set(style_names).issubset(set(layers)))
     # assert(set(content_names).issubset(set(layers)))
 
-    criterion = get_loss()
-    
+    criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
+                                                alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
+
+
     for style_image in style_images:
 
         inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, criterion, style_image.image, content_image.image,
@@ -176,13 +163,15 @@ if __name__ == "__main__":
     CONTENT_NAMES = ["conv4_2", "conv5_2"]
     CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
 
-    VARIATION_LAMBDA = 0
+    VARIATION_LAMBDA = 1
+    REPLACE_POOLING = False
     
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
-                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, "variation lambda": VARIATION_LAMBDA}
+                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
+                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING}
 
     date = datetime.today()
 
@@ -204,9 +193,12 @@ if __name__ == "__main__":
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
+    # content_images = filter_images(content_images, ["stonehenge", "tom"])
+    # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
+    #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
+
     content_images = filter_images(content_images, ["stonehenge", "tom"])
-    style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
-     "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
+    style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Edvard_Munch_12"])
 
 
     # multiprocsess_run(content_images, style_images)
