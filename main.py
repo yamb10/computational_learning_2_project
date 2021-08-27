@@ -52,7 +52,7 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
     style_image = transform(style_image).to(device)
     content_image = transform(content_image).to(device)
 
-    optimizer = torch.optim.Adam([inputs], lr=1e-3)
+    optimizer = torch.optim.Adam([inputs], lr=5e-3)
 
     style_outputs = splitted_model(style_image)
     content_outputs = splitted_model(content_image)
@@ -151,25 +151,27 @@ def run(content_images, style_images):
         run_content_image(img, style_images)
 
 if __name__ == "__main__":
-    EPOCH_NUM = 15000
+    EPOCH_NUM = int(10 ** 4)
     INPUT_SIZE = (3, 512, 512)
-    SEED = 7442
-    RANDOM_STARTS = 1
+    SEED = 6643527
+    RANDOM_STARTS = 2
     ALPHA = 1
-    BETA = 5e7
+    BETA = 1e8
     DEVICE = "cuda"
     STYLE_NAMES = ["conv1_1", "conv2_1", "conv3_1", "conv4_1"]
+    STYLE_WEIGTHS = None
     CONTENT_NAMES = ["conv4_2", "conv5_2"]
     CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
-                     "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES}
+                     "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
+                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS}
 
     date = datetime.today()
 
     output_folder = os.path.join("outputs_all", date.strftime(
-        "%Y-%m-%d"), date.strftime("%H:%M:%s"))
+        "%Y-%m-%d"), date.strftime("%H:%M:%S"))
 
     os.makedirs(output_folder)
 
@@ -186,8 +188,9 @@ if __name__ == "__main__":
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
-    content_images = filter_images(content_images, ["tel_aviv"])
-    style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
+    content_images = filter_images(content_images, ["stonehenge", "tom"])
+    style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
+     "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
 
 
     # multiprocsess_run(content_images, style_images)
