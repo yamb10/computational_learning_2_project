@@ -56,7 +56,7 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
 
         loss = criterion(outputs, style_outputs, content_outputs)
 
-        if VARIATION_LAMBDA == 0:
+        if VARIATION_LAMBDA != 0:
             loss += VARIATION_LAMBDA * regularizer(inputs)
 
         loss.backward()
@@ -152,19 +152,19 @@ def run(content_images, style_images):
 
 if __name__ == "__main__":
     EPOCH_NUM = int(10 ** 4)
-    INPUT_SIZE = (3, 512, 512)
+    INPUT_SIZE = (3, 1024, 1024)
     SEED = 6643527
-    RANDOM_STARTS = 2
+    RANDOM_STARTS = 1
     ALPHA = 1
     BETA = 1e8
     DEVICE = "cuda"
-    STYLE_NAMES = ["conv1_1", "conv2_1", "conv3_1", "conv4_1"]
-    STYLE_WEIGTHS = None
+    STYLE_NAMES = ["conv1_2", "conv2_1", "conv3_1"]
+    STYLE_WEIGTHS = {"conv1_2": 0.6, "conv2_1":0.2, "conv3_1": 0.1}
     CONTENT_NAMES = ["conv4_2", "conv5_2"]
     CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
 
-    VARIATION_LAMBDA = 1
-    REPLACE_POOLING = False
+    VARIATION_LAMBDA = 100
+    REPLACE_POOLING = True
     
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
     #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
 
-    content_images = filter_images(content_images, ["stonehenge", "tom"])
+    content_images = filter_images(content_images, ["tel_aviv"])
     style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Edvard_Munch_12"])
 
 
