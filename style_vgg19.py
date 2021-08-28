@@ -4,9 +4,8 @@ import torch
 import torch.nn as nn
 from torchvision.models import vgg19
 
-class StyleVGG19(nn.Module):
+class StyleVGG19(ByLayerModel):
     def __init__(self, replace_pooling=False) -> None:
-        super().__init__()
 
         self.layers = ["conv1_1", "relu1_1", "conv1_2", "relu1_2", "maxpool1",
               "conv2_1", "relu2_1", "conv2_2", "relu2_2", "maxpool2",
@@ -34,10 +33,6 @@ class StyleVGG19(nn.Module):
 
 
 
-        
+        super().__init__(model, names=self.layers)
 
-        self.splitted_model = ByLayerModel(model, names=self.layers)
-
-    def forward(self, inputs):
-        return self.splitted_model(inputs)
         
