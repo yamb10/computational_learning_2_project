@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class StyleTansferLoss(nn.Module):
-    def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, device="cuda", alpha=1, beta=1) -> None:
+    def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, device="cuda", alpha=1, beta=1, square_error=True) -> None:
         super().__init__()
         if style_weights is None:
             self.style_weights = torch.ones(len(style_layers), device=device, requires_grad=False) / len(style_layers)
@@ -22,6 +22,7 @@ class StyleTansferLoss(nn.Module):
         self.beta = beta
         self.style_layers = style_layers
         self.content_layers = content_layers
+        self.square_error = square_error
 
 
 
@@ -62,7 +63,10 @@ class StyleTansferLoss(nn.Module):
             p, f = P[l], F[l]
             _, c, d, e = p.size()
             a, g = self.gram_matrix(p), self.gram_matrix(f)  # check with batch size > 1
-            loss += self.style_weights[l] * 1/((2*d*e*c)**2) * torch.linalg.norm(a-g) ** 2
+            if self.square_error:
+                loss += self.style_weights[l] * 1/((2*d*e*c)**2) * torch.linalg.norm(a-g) ** 2
+            else:
+                loss += self.style_weights[l] * 1/((2*d*e*c)) * torch.sum(torch.abs(a-g))
         return loss
 
 
@@ -77,7 +81,11 @@ class StyleTansferLoss(nn.Module):
         loss = 0  # torch.zeros(batch_size, device=C.device)
         for l in range(num_layers):
             p, f = C[l], G[l]
-            loss += self.content_weights[l] * torch.linalg.norm(p-f) ** 2  # fixed the formula
+            if self.square_error:
+                loss += self.content_weights[l] * torch.linalg.norm(p-f) ** 2  # fixed the formula
+            else:
+                loss += self.content_weights[l] * torch.sum(torch.abs(p-f))  # fixed the formula
+
         return loss / 2
 
         # return sum(map(lambda x: torch.linalg.norm(x[0]-x[1]) ** 2, zip(C, G))) / 2
