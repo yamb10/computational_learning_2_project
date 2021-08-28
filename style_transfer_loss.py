@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 class StyleTansferLoss(nn.Module):
-    def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, device="cuda", alpha=1, beta=1, square_error=True) -> None:
+    def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, 
+                       device="cuda", alpha=1, beta=1, square_error=True) -> None:
         super().__init__()
         if style_weights is None:
             self.style_weights = torch.ones(len(style_layers), device=device, requires_grad=False) / len(style_layers)
