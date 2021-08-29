@@ -49,8 +49,9 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
 
     style_outputs = model(style_image)
     content_outputs = model(content_image)
+    
 
-    for epcoh_num in trange(ephoch_num, disable=not verbose):
+    for epcoh_num in trange(ephoch_num, disable=not verbose, ncols=150):
 
         outputs = model(normalize(inputs))
 
@@ -70,11 +71,10 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
             inputs.clamp_(0, 1)
 
 
-
-        #     for i in inputs:
-        #         i.clamp_(0, 255)
-        # if before.equal(inputs):
-        #     raise RuntimeError
+            #     for i in inputs:
+            #         i.clamp_(0, 255)
+            # if before.equal(inputs):
+            #     raise RuntimeError
 
     return inputs, loss_values
 
@@ -87,7 +87,8 @@ def run_content_image(content_image, style_images):
     # assert(set(content_names).issubset(set(layers)))
 
     criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
-                                                alpha=ALPHA, beta=BETA, device=DEVICE, content_weights=CONTENT_WEIGHTS)
+                                                alpha=ALPHA, beta=BETA, device=DEVICE, 
+                                                content_weights=CONTENT_WEIGHTS, square_error=SQUARE_ERROR)
 
 
     for style_image in style_images:
@@ -151,27 +152,34 @@ def run(content_images, style_images):
         run_content_image(img, style_images)
 
 if __name__ == "__main__":
-    EPOCH_NUM = int(10 ** 4)
-    INPUT_SIZE = (3, 1024, 1024)
+    EPOCH_NUM = 10000
+    INPUT_SIZE = (3, 224, 224)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 1e8
+    BETA = 5e4
     DEVICE = "cuda"
-    STYLE_NAMES = ["conv1_2", "conv2_1", "conv3_1"]
-    STYLE_WEIGTHS = {"conv1_2": 0.6, "conv2_1":0.2, "conv3_1": 0.1}
-    CONTENT_NAMES = ["conv4_2", "conv5_2"]
-    CONTENT_WEIGHTS = {"conv4_2": 0.333, "conv5_2":0.666}
+    STYLE_WEIGTHS = {'conv1_1' : 1.0,
+                                     'conv2_1' : 0.75,
+                                     'conv3_1' : 0.2,
+                                     'conv4_1' : 0.2,
+                                     'conv5_1' : 0.2
+                                     }
+    STYLE_NAMES = list(STYLE_WEIGTHS.keys())
+    CONTENT_WEIGHTS = {"conv4_2": 1}
+    CONTENT_NAMES = list(CONTENT_WEIGHTS.keys())
 
-    VARIATION_LAMBDA = 100
-    REPLACE_POOLING = True
+    VARIATION_LAMBDA = 1
+    REPLACE_POOLING = False
+    SQUARE_ERROR = False
     
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
                       "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
-                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING}
+                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
+                      "square error": SQUARE_ERROR, "norm": True}
 
     date = datetime.today()
 
@@ -190,15 +198,24 @@ if __name__ == "__main__":
     CONTENT_FOLDER = "content"
     STYLE_FOLDER = "style_photos"
 
+
+    STYLE_FOLDER = "high_res_styles"
+
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
+
+    
+
+    # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
+    # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
+
 
     # content_images = filter_images(content_images, ["stonehenge", "tom"])
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
     #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
 
     content_images = filter_images(content_images, ["tel_aviv"])
-    style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Edvard_Munch_12"])
+    # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
 
 
     # multiprocsess_run(content_images, style_images)
