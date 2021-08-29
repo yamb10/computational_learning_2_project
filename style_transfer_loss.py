@@ -38,6 +38,10 @@ class StyleTansferLoss(nn.Module):
 
         features = A.view(bs, a, b * c)  # resise F_XL into \hat F_XL
 
+        mid_matrix = torch.mean(features, dim=1, keepdim=True)
+        features = features - mid_matrix
+        
+
         # compute the gram product
         G = torch.bmm(features, features.transpose(1, 2))
 
