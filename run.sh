@@ -1,1 +1,1 @@
-screen -dm -L sh -c "/anaconda/envs/azureml_py36_pytorch/bin/python /home/student/project/main.py"
+screen -dm -L sh -c "/anaconda/envs/azureml_py36_pytorch/bin/python main.py"
