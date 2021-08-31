@@ -88,7 +88,9 @@ def run_content_image(content_image, style_images):
 
     criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
                                                 alpha=ALPHA, beta=BETA, device=DEVICE, 
-                                                content_weights=CONTENT_WEIGHTS, square_error=SQUARE_ERROR)
+                                                content_weights=CONTENT_WEIGHTS, 
+                                                square_error=SQUARE_ERROR,
+                                                gram_matirx_norm=GRAM_MATRIX_NORM)
 
 
     for style_image in style_images:
@@ -153,11 +155,11 @@ def run(content_images, style_images):
 
 if __name__ == "__main__":
     EPOCH_NUM = 10000
-    INPUT_SIZE = (3, 224, 224)
+    INPUT_SIZE = (3, 512, 512)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 5e4
+    BETA = 5e6
     DEVICE = "cuda"
     STYLE_WEIGTHS = {'conv1_1' : 1.0,
                                      'conv2_1' : 0.75,
@@ -170,8 +172,11 @@ if __name__ == "__main__":
     CONTENT_NAMES = list(CONTENT_WEIGHTS.keys())
 
     VARIATION_LAMBDA = 1
-    REPLACE_POOLING = False
+    REPLACE_POOLING = True
     SQUARE_ERROR = False
+
+    GRAM_MATRIX_NORM = True
+
     
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
@@ -179,7 +184,7 @@ if __name__ == "__main__":
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
                       "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
                       "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
-                      "square error": SQUARE_ERROR, "norm": True}
+                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM}
 
     date = datetime.today()
 
@@ -214,7 +219,7 @@ if __name__ == "__main__":
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
     #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
 
-    content_images = filter_images(content_images, ["tel_aviv"])
+    content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
 
 

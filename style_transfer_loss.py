@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class StyleTansferLoss(nn.Module):
     def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, 
-                       device="cuda", alpha=1, beta=1, square_error=True) -> None:
+                       device="cuda", alpha=1, beta=1, square_error=True, gram_matirx_norm=False) -> None:
         super().__init__()
         if style_weights is None:
             self.style_weights = torch.ones(len(style_layers), device=device, requires_grad=False) / len(style_layers)
@@ -24,11 +24,10 @@ class StyleTansferLoss(nn.Module):
         self.style_layers = style_layers
         self.content_layers = content_layers
         self.square_error = square_error
+        self.gram_matirx_norm = gram_matirx_norm
 
 
-
-    @staticmethod
-    def gram_matrix(A):
+    def gram_matrix(self, A):
         """
         A - Tensor
         """
@@ -38,8 +37,9 @@ class StyleTansferLoss(nn.Module):
 
         features = A.view(bs, a, b * c)  # resise F_XL into \hat F_XL
 
-        mid_matrix = torch.mean(features, dim=1, keepdim=True)
-        features = features - mid_matrix
+        if self.gram_matirx_norm:
+            mid_matrix = torch.mean(features, dim=1, keepdim=True)
+            features = features - mid_matrix
         
 
         # compute the gram product
