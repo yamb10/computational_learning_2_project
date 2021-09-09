@@ -19,7 +19,7 @@ from total_variation_loss import TotalVariationLoss
 
 
 
-def train(ephoch_num, input_size, criterion, style_image, content_image, device="cuda", random_starts=1, verbose=True):
+def train(ephoch_num, input_size, criterion, style_image, content_image, device="cuda", random_starts=1, verbose=True, convex_combination_lambda=1, after_train=False):
 
     inputs = torch.rand([random_starts] + list(input_size),
                         requires_grad=True, device=device)
@@ -30,6 +30,7 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
 
     style_image.requires_grad_(False)
     content_image.requires_grad_(False)
+    
 
     loss_values = []
 
@@ -38,9 +39,13 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])  # following the documentation of VGG19
+    resize = transforms.Resize(input_size[1:])
+
+    content_resized = resize(content_image).to(device)
+    content_resized.requires_grad = False
 
     transform = transforms.Compose(
-        [transforms.Resize(input_size[1:]), normalize])
+        [resize, normalize])
 
     style_image = transform(style_image).to(device)
     content_image = transform(content_image).to(device)
@@ -68,20 +73,41 @@ def train(ephoch_num, input_size, criterion, style_image, content_image, device=
         optimizer.zero_grad()
 
         with torch.no_grad():
+            # convex combination
+            # inputs.mul_(convex_combination_lambda)
+            # inputs.add_((1-convex_combination_lambda) * content_resized)
             inputs.clamp_(0, 1)
 
+        # convex_combination_lambda *= convex_combination_lambda
+    if after_train:
+        criterion.beta /= 1e2
+        for epoch_num in range(10):
+            outputs = model(normalize(inputs))
 
-            #     for i in inputs:
-            #         i.clamp_(0, 255)
-            # if before.equal(inputs):
-            #     raise RuntimeError
+            loss = criterion(outputs, style_outputs, content_outputs)
 
+            if VARIATION_LAMBDA != 0:
+                loss += VARIATION_LAMBDA * regularizer(inputs)
+
+            loss.backward()
+
+            loss_values.append(loss.item())
+
+            optimizer.step()
+            optimizer.zero_grad()
+
+            with torch.no_grad():
+                # convex combination
+                # inputs.mul_(convex_combination_lambda)
+                # inputs.add_((1-convex_combination_lambda) * content_resized)
+                inputs.clamp_(0, 1)
+                
     return inputs, loss_values
 
 
 
 
-def run_content_image(content_image, style_images):
+def run_content_image(content_image, style_images, convex_combination_lambda=1, after_train=False):
 
     # assert(set(style_names).issubset(set(layers)))
     # assert(set(content_names).issubset(set(layers)))
@@ -96,7 +122,8 @@ def run_content_image(content_image, style_images):
     for style_image in style_images:
 
         inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, criterion, style_image.image, content_image.image,
-                                    random_starts=RANDOM_STARTS, verbose=True, device=DEVICE)
+                                    random_starts=RANDOM_STARTS, verbose=True, device=DEVICE, convex_combination_lambda=convex_combination_lambda, after_train=after_train)
+        
 
         plt.rcParams["figure.figsize"] = (16, 9)
 
@@ -148,18 +175,19 @@ def multiprocsess_run(content_images, style_images):
         p.join()
 
 
-def run(content_images, style_images):
+def run(content_images, style_images, convex_combination_lambda=1, after_train=False):
 
     for img in content_images:
-        run_content_image(img, style_images)
+        run_content_image(img, style_images, convex_combination_lambda, after_train=after_train)
 
 if __name__ == "__main__":
     EPOCH_NUM = 10000
-    INPUT_SIZE = (3, 512, 512)
+    INPUT_SIZE = (3, 256, 256)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 5e6
+    BETA = 2.5e4
+    50000
     DEVICE = "cuda"
     STYLE_WEIGTHS = {'conv1_1' : 1.0,
                                      'conv2_1' : 0.75,
@@ -177,52 +205,55 @@ if __name__ == "__main__":
 
     GRAM_MATRIX_NORM = True
 
+    AFTER_TRAIN= False
+    for b in [7.5e3, 1e3]:  # , -1, -7.5e4
+        BETA = b
     
 
-    configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
-                     "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
-                     "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
-                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
-                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
-                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM}
+        configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
+                        "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
+                        "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
+                        "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
+                        "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
+                        "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM,
+                        "additional_notes": "tried after_train","after_train":AFTER_TRAIN}
 
-    date = datetime.today()
+        date = datetime.today()
 
-    output_folder = os.path.join("outputs_all", date.strftime(
-        "%Y-%m-%d"), date.strftime("%H:%M:%S"))
+        output_folder = os.path.join("outputs_all", date.strftime(
+            "%Y-%m-%d"), date.strftime("%H:%M:%S"))
 
-    os.makedirs(output_folder)
+        os.makedirs(output_folder)
 
-    with open(os.path.join(output_folder, "configuration.json"), "w", encoding="utf-8") as f:
-        json.dump(configuration, f, ensure_ascii=False, indent=4)
+        with open(os.path.join(output_folder, "configuration.json"), "w", encoding="utf-8") as f:
+            json.dump(configuration, f, ensure_ascii=False, indent=4)
 
-    print(configuration)
+        print(configuration)
 
-    torch.manual_seed(SEED)
+        torch.manual_seed(SEED)
 
-    CONTENT_FOLDER = "content"
-    STYLE_FOLDER = "style_photos"
-
-
-    STYLE_FOLDER = "high_res_styles"
-
-    content_images = read_images(CONTENT_FOLDER)
-    style_images = read_images(STYLE_FOLDER)
-
-    
-
-    # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
-    # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
+        CONTENT_FOLDER = "content"
+        STYLE_FOLDER = "style_photos"
 
 
-    # content_images = filter_images(content_images, ["stonehenge", "tom"])
-    # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
-    #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
+        # STYLE_FOLDER = "high_res_styles"
 
-    content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
-    # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
+        content_images = read_images(CONTENT_FOLDER)
+        style_images = read_images(STYLE_FOLDER)
+
+        
+
+        # content_images = filter_images(content_images, ["stonehenge",  "obama", "tel_aviv"])
+        # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
 
 
-    # multiprocsess_run(content_images, style_images)
+        content_images = filter_images(content_images, ["Lenna"])
+        style_images = filter_images(style_images, ["Vincent_van_Gogh_368","Vincent_van_Gogh_69"])
 
-    run(content_images, style_images)
+        # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
+        # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
+
+
+        # multiprocsess_run(content_images, style_images)
+
+        run(content_images, style_images, after_train= AFTER_TRAIN)
