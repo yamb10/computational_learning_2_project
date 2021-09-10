@@ -41,6 +41,11 @@ class Trainer:
         inputs = torch.rand([self.random_starts] + list(self.input_size),
                             requires_grad=True, device=self.device)
 
+        if self.optimizer_type == 'adam':
+            self.optimizer = torch.optim.Adam([inputs])
+        elif self.optimizer_type == 'lbfgs':
+            self.optimizer = torch.optim.LBFGS([inputs])
+
         for epcoh_num in trange(self.ephoch_num, disable=not self.verbose, ncols=150):
             
             def closure():
