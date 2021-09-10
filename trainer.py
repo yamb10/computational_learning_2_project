@@ -88,3 +88,8 @@ class Trainer:
             #     raise RuntimeError
 
         return inputs, loss_values
+
+    @save_path.setter
+    def save_path(self, value):
+        self.save_path = value
+        os.makedirs(self.save_path)

@@ -36,10 +36,15 @@ def run_content_image(content_image, style_images):
 
     trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE, criterion=criterion,
                       model=model, device=DEVICE, random_starts=RANDOM_STARTS,
-                      verbose=VERBOSE, optimizer=OPTIMIZER)
+                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY)
 
 
     for style_image in style_images:
+
+        folder_name = os.path.join(output_folder, f"{content_image.name}", f"{style_image.name}")
+        os.makedirs(folder_name)
+
+        trainer.save_path = os.path.join(folder_name, "training")
 
         inputs, loss_values = trainer.train(style_image.image, content_image.image)
 
@@ -51,8 +56,7 @@ def run_content_image(content_image, style_images):
         plt.savefig(os.path.join(output_folder,
                     f"{content_image.name}_loss.png"))
 
-        folder_name = os.path.join(output_folder, f"{content_image.name}", f"{style_image.name}")
-        os.makedirs(folder_name)
+
 
         trasform = transforms.ToPILImage()
 
@@ -125,8 +129,11 @@ if __name__ == "__main__":
     OPTIMIZER = 'LBFGS'
     OPTIMIZER = OPTIMIZER.lower()
     assert OPTIMIZER in ['lbfgs', 'adam']
-    
 
+    BASE_OUTPUT_DIR = "outputs_all" 
+
+    PLOT_EVERY = 100
+    
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
@@ -137,7 +144,7 @@ if __name__ == "__main__":
 
     date = datetime.today()
 
-    output_folder = os.path.join("outputs_all", date.strftime(
+    output_folder = os.path.join(BASE_OUTPUT_DIR, date.strftime(
         "%Y-%m-%d"), date.strftime("%H:%M:%S"))
 
     os.makedirs(output_folder)
