@@ -1,3 +1,5 @@
+import os
+from matplotlib import pyplot as plt
 from torchvision import transforms
 import torch
 from tqdm import trange
@@ -7,7 +9,7 @@ from total_variation_loss import TotalVariationLoss
 class Trainer:
     def __init__(self, ephoch_num, input_size, criterion, model, device="cuda",
                   random_starts=1, verbose=False, optimizer='lbfgs',
-                  variation_labmda=0):
+                  variation_labmda=0, save_every=-1, save_path=None):
         self.ephoch_num = ephoch_num
         self.input_size = input_size
         self.criterion = criterion
@@ -25,6 +27,9 @@ class Trainer:
         self.resize = transforms.Resize(input_size[1:]) 
 
         self.transform = transforms.Compose([self.resize, self.normalize])
+        
+        self.save_every = save_every
+        self.save_path = save_path
         
 
     def train(self, style_image, content_image):
@@ -62,6 +67,16 @@ class Trainer:
                 return loss
 
             self.optimizer.step(closure)
+
+            with torch.no_grad():
+                if self.save_every > 0 and epcoh_num % self.save_every == 0:
+                    for i, input in enumerate(inputs):
+                        img = transforms.ToPILImage()(input)
+                        if self.save_path is None:
+                            plt.imshow(img)
+                        else:
+                            img.save(os.path.join(self.save_path, f"{i}.png"))
+                            
 
         with torch.no_grad():
             inputs.clamp_(0, 1)
