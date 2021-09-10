@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     PLOT_EVERY = -1
 
-    FINE_TUNINNG_EPOCH_NUM = 1
+    FINE_TUNINNG_EPOCH_NUM = 5
     
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
