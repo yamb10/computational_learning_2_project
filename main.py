@@ -99,28 +99,28 @@ def run(content_images, style_images):
         run_content_image(img, style_images)
 
 if __name__ == "__main__":
-    EPOCH_NUM = 10000
+    EPOCH_NUM = 500
     INPUT_SIZE = (3, 512, 512)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
     BETA = 5e6
     DEVICE = "cuda"
-    STYLE_WEIGTHS = {'conv1_1' : 1.0,
-                                     'conv2_1' : 0.75,
-                                     'conv3_1' : 0.2,
-                                     'conv4_1' : 0.2,
-                                     'conv5_1' : 0.2
-                                     }
+    STYLE_WEIGTHS = {'conv1_1' : 0.2,
+                     'conv2_1' : 0.2,
+                     'conv3_1' : 0.2,
+                     'conv4_1' : 0.2,
+                     'conv5_1' : 0.2}
+
     STYLE_NAMES = list(STYLE_WEIGTHS.keys())
-    CONTENT_WEIGHTS = {"conv4_2": 1}
+    CONTENT_WEIGHTS = {"relu4_2": 1}
     CONTENT_NAMES = list(CONTENT_WEIGHTS.keys())
 
-    VARIATION_LAMBDA = 1
+    VARIATION_LAMBDA = 0
     REPLACE_POOLING = True
-    SQUARE_ERROR = False
+    SQUARE_ERROR = True
 
-    GRAM_MATRIX_NORM = True
+    GRAM_MATRIX_NORM = False
 
     OPTIMIZER = 'LBFGS'
     OPTIMIZER = OPTIMIZER.lower()
