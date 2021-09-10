@@ -32,7 +32,7 @@ class Trainer:
         self._save_path = save_path
         self.multiple_styles= multiple_styles 
 
-    def train(self, style_image, content_image):
+    def train(self, style_image, content_image, start=None):
         loss_values = []
         if self.multiple_styles:
             style_image = torch.cat([self.transform(i) for i in style_image ]).to(self.device)
@@ -46,8 +46,12 @@ class Trainer:
         style_outputs = self.model(style_image)
         content_outputs = self.model(content_image)
 
-        inputs = torch.rand([self.random_starts] + list(self.input_size),
-                            requires_grad=True, device=self.device)
+        if start is None:
+            inputs = torch.rand([self.random_starts] + list(self.input_size),
+                                requires_grad=True, device=self.device)
+        else: 
+            inputs = start
+            # assert(all(x == y for x, y in zip(inputs.shape[1:], self.input_size)))
 
         if self.optimizer_type == 'adam':
             self.optimizer = torch.optim.Adam([inputs])
