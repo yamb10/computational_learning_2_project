@@ -184,7 +184,7 @@ if __name__ == "__main__":
                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
                      "optimizer": OPTIMIZER, "multipule styles": MULTIPULE_STYLES,
-                    "find tuning epoch num":FINE_TUNINNG_EPOCH_NUM}
+                    "fine tuning epoch num":FINE_TUNINNG_EPOCH_NUM}
 
 
     date = datetime.today()
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
-    STYLE_IMGS_WEIGTHS ={"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
+    STYLE_IMGS_WEIGTHS = {"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
 
 
     # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
