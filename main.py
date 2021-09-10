@@ -30,40 +30,61 @@ def run_content_image(content_image, style_images):
                                                 alpha=ALPHA, beta=BETA, device=DEVICE, 
                                                 content_weights=CONTENT_WEIGHTS, 
                                                 square_error=SQUARE_ERROR,
-                                                gram_matirx_norm=GRAM_MATRIX_NORM)
+                                                gram_matirx_norm=GRAM_MATRIX_NORM, styles_imgs_weights= STYLE_IMGS_WEIGTHS )
 
     model = StyleVGG19(replace_pooling=REPLACE_POOLING)
 
     trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE, criterion=criterion,
                       model=model, device=DEVICE, random_starts=RANDOM_STARTS,
-                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY)
+                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY, multiple_styles=MULTIPULE_STYLES)
+
+    if not MULTIPULE_STYLES: 
+        for style_image in style_images:
+
+            folder_name = os.path.join(output_folder, f"{content_image.name}", f"{style_image.name}")
+            os.makedirs(folder_name)
+
+            trainer.save_path = os.path.join(folder_name, "training")
+
+            inputs, loss_values = trainer.train(style_image.image, content_image.image)
+
+            plt.rcParams["figure.figsize"] = (16, 9)
+
+            plt.semilogy(np.arange(len(loss_values)) + 1,
+                        loss_values, label=f"{style_image.name}")
+            plt.legend()
+            plt.savefig(os.path.join(output_folder,
+                        f"{content_image.name}_loss.png"))
 
 
-    for style_image in style_images:
 
-        folder_name = os.path.join(output_folder, f"{content_image.name}", f"{style_image.name}")
-        os.makedirs(folder_name)
+            trasform = transforms.ToPILImage()
 
-        trainer.save_path = os.path.join(folder_name, "training")
+            for i, t in enumerate(inputs):
 
-        inputs, loss_values = trainer.train(style_image.image, content_image.image)
+                img = trasform(t)
+                img.save(os.path.join(folder_name, f"{i}.png"))
+    else:
+            st_images=[i.image for i in style_images]
+            st_images_name=",".join([i.name for i in style_images])
+            folder_name = os.path.join(output_folder, f"{content_image.name}", f"{st_images_name}")
+            os.makedirs(folder_name)
+            trainer.save_path = os.path.join(folder_name, "training")
+            inputs, loss_values = trainer.train(st_images, content_image.image)
 
-        plt.rcParams["figure.figsize"] = (16, 9)
+            plt.rcParams["figure.figsize"] = (16, 9)
+            plt.semilogy(np.arange(len(loss_values)) + 1,
+                        loss_values, label=f"{st_images_name}")
+            plt.legend()
+            plt.savefig(os.path.join(output_folder,
+                        f"{content_image.name}_loss.png"))
 
-        plt.semilogy(np.arange(len(loss_values)) + 1,
-                     loss_values, label=f"{style_image.name}")
-        plt.legend()
-        plt.savefig(os.path.join(output_folder,
-                    f"{content_image.name}_loss.png"))
+            trasform = transforms.ToPILImage()
 
+            for i, t in enumerate(inputs):
+                img = trasform(t)
+                img.save(os.path.join(folder_name, f"{i}.png"))
 
-
-        trasform = transforms.ToPILImage()
-
-        for i, t in enumerate(inputs):
-
-            img = trasform(t)
-            img.save(os.path.join(folder_name, f"{i}.png"))
 
     plt.clf()
 
@@ -104,7 +125,7 @@ def run(content_images, style_images):
 
 if __name__ == "__main__":
     EPOCH_NUM = 100
-    INPUT_SIZE = (3, 512, 512)
+    INPUT_SIZE = (3, 256, 256)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
@@ -126,6 +147,7 @@ if __name__ == "__main__":
 
     GRAM_MATRIX_NORM = False
 
+
     OPTIMIZER = 'LBFGS'
     OPTIMIZER = OPTIMIZER.lower()
     assert OPTIMIZER in ['lbfgs', 'adam']
@@ -134,13 +156,15 @@ if __name__ == "__main__":
 
     PLOT_EVERY = -1
     
+    MULTIPULE_STYLES= True
+
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
-                     "optimizer": OPTIMIZER}
+                     "optimizer": OPTIMIZER, "multipule styles": MULTIPULE_STYLES}
 
     date = datetime.today()
 
@@ -165,15 +189,14 @@ if __name__ == "__main__":
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
-    
+    STYLE_IMGS_WEIGTHS ={"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
 
     # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
     # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
 
 
     # content_images = filter_images(content_images, ["stonehenge", "tom"])
-    # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
-    #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
+    style_images = filter_images(style_images, ["Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
 
     # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
