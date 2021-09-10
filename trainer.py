@@ -29,7 +29,7 @@ class Trainer:
         self.transform = transforms.Compose([self.resize, self.normalize])
         
         self.save_every = save_every
-        self.save_path = save_path
+        self._save_path = save_path
         
 
     def train(self, style_image, content_image):
@@ -89,7 +89,12 @@ class Trainer:
 
         return inputs, loss_values
 
+    @property
+    def save_path(self):
+        return self._save_path   
+
+
     @save_path.setter
     def save_path(self, value):
-        self.save_path = value
-        os.makedirs(self.save_path)
+        self._save_path = value
+        os.makedirs(self._save_path)
