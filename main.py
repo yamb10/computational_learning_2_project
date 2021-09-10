@@ -103,12 +103,12 @@ def run(content_images, style_images):
         run_content_image(img, style_images)
 
 if __name__ == "__main__":
-    EPOCH_NUM = 500
+    EPOCH_NUM = 100
     INPUT_SIZE = (3, 512, 512)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 5e6
+    BETA = 1e9
     DEVICE = "cuda"
     STYLE_WEIGTHS = {'conv1_1' : 0.2,
                      'conv2_1' : 0.2,
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     BASE_OUTPUT_DIR = "outputs_all" 
 
-    PLOT_EVERY = 100
+    PLOT_EVERY = -1
     
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
