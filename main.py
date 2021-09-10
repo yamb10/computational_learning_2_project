@@ -29,17 +29,17 @@ def run_content_image(content_image, style_images, fine_tuning_epoch_num=0):
     model = StyleVGG19(replace_pooling=REPLACE_POOLING)
 
     trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE, criterion=criterion,
-                      model=model, device=DEVICE, random_starts=RANDOM_STARTS,
-                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY, multiple_styles=MULTIPULE_STYLES)
+                      model=model, device=DEVICE, random_starts=RANDOM_STARTS, 
+                      verbose=VERBOSE, optimizer=OPTIMIZER, variation_labmda=VARIATION_LAMBDA, save_every=PLOT_EVERY, multiple_styles=MULTIPULE_STYLES)
 
     fine_tuning_criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
                                                 alpha=ALPHA, beta=BETA / 100, device=DEVICE, 
                                                 content_weights=CONTENT_WEIGHTS, 
-                                                square_error=SQUARE_ERROR,
+                                                square_error=SQUARE_ERROR, 
                                                 gram_matirx_norm=GRAM_MATRIX_NORM, styles_imgs_weights= STYLE_IMGS_WEIGTHS)
 
     fine_tuning_trainer = Trainer(ephoch_num=fine_tuning_epoch_num, input_size=INPUT_SIZE, criterion=fine_tuning_criterion,
-                      model=model, device=DEVICE, random_starts=RANDOM_STARTS,
+                      model=model, device=DEVICE, random_starts=RANDOM_STARTS, variation_labmda=VARIATION_LAMBDA,
                       verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY, multiple_styles=MULTIPULE_STYLES)
 
 
@@ -139,7 +139,7 @@ def run(content_images, style_images, fine_tuning_epoch_num=0):
         run_content_image(img, style_images, fine_tuning_epoch_num)
 
 if __name__ == "__main__":
-    EPOCH_NUM = 100
+    EPOCH_NUM = int(1e2)
     INPUT_SIZE = (3, 512, 512)
     SEED = 6643527
     RANDOM_STARTS = 1
@@ -156,14 +156,14 @@ if __name__ == "__main__":
     CONTENT_WEIGHTS = {"relu4_2": 1}
     CONTENT_NAMES = list(CONTENT_WEIGHTS.keys())
 
-    VARIATION_LAMBDA = 0
+    VARIATION_LAMBDA = 1
     REPLACE_POOLING = True
     SQUARE_ERROR = True
 
     GRAM_MATRIX_NORM = False
 
 
-    OPTIMIZER = 'LBFGS'
+    OPTIMIZER = 'lbfgs'
     OPTIMIZER = OPTIMIZER.lower()
     assert OPTIMIZER in ['lbfgs', 'adam']
 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     PLOT_EVERY = -1
 
-    FINE_TUNINNG_EPOCH_NUM = 5
+    FINE_TUNINNG_EPOCH_NUM = 0
     
     MULTIPULE_STYLES= False
 
@@ -208,20 +208,20 @@ if __name__ == "__main__":
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
-    STYLE_IMGS_WEIGTHS = {"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
+    STYLE_IMGS_WEIGTHS = None #{"Edvard_Munch_The_Scream" : 1 , "Vincent_van_Gogh_The_Starry_Nght" :0 } 
 
 
     # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
-    # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
+    style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
 
 
     # content_images = filter_images(content_images, ["stonehenge", "tom"])
     # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
 
     # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
-    # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
+    # style_images = filter_images(style_images, ["Francisco_Goya_79"])
     
-    content_images = filter_images(content_images, ['Lenna', 'tel_aviv', "stonehendge"])
+    content_images = filter_images(content_images, [ 'tel_aviv']) # 'Lenna',, "stonehendge"
 
 
     # multiprocsess_run(content_images, style_images)
