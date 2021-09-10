@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class StyleTansferLoss(nn.Module):
     def __init__(self, style_layers, content_layers, style_weights=None, content_weights=None, 
-                       device="cuda", alpha=1, beta=1, square_error=True, gram_matirx_norm=False) -> None:
+                       device="cuda", alpha=1, beta=1, square_error=True, gram_matirx_norm=False,styles_imgs_weights=None) -> None:
         super().__init__()
         if style_weights is None:
             self.style_weights = torch.ones(len(style_layers), device=device, requires_grad=False) / len(style_layers)
@@ -18,6 +18,11 @@ class StyleTansferLoss(nn.Module):
             content_weights = [content_weights[key] for key in content_layers]
             assert len(content_weights) == len(content_layers)
             self.content_weights = content_weights
+        if styles_imgs_weights is None:
+            self.styles_imgs_weights = torch.tensor([1], requires_grad=False, device=device)
+        else: 
+            styles_imgs_weights = [styles_imgs_weights[key] for key in styles_imgs_weights]
+            self.styles_imgs_weights =  torch.tensor(styles_imgs_weights, requires_grad=False, device=device)
         
         self.alpha = alpha
         self.beta = beta
@@ -25,7 +30,7 @@ class StyleTansferLoss(nn.Module):
         self.content_layers = content_layers
         self.square_error = square_error
         self.gram_matirx_norm = gram_matirx_norm
-
+        self.imgs_weights= None
 
     def gram_matrix(self, A):
         """
@@ -62,16 +67,25 @@ class StyleTansferLoss(nn.Module):
         """
 
         num_layers = len(P)
-        
+        if self.imgs_weights is None:
+            num_imgs=F[0].shape[0]
+            if self.styles_imgs_weights.shape[0] != num_imgs: 
+                imgs_weights = torch.tile(self.styles_imgs_weights,[num_imgs])
+            else:
+                imgs_weights =self.styles_imgs_weights
+            self.imgs_weights= (imgs_weights/torch.sum(imgs_weights)).view(-1,1,1,1) # normalize styles weights 
         loss = 0
         for l in range(num_layers):
             p, f = P[l], F[l]
             _, c, d, e = p.size()
             a, g = self.gram_matrix(p), self.gram_matrix(f)  # check with batch size > 1
+            a.unsqueeze_(0)
+            g.unsqueeze_(1)
+            x=(a-g)*self.imgs_weights
             if self.square_error:
-                loss += self.style_weights[l] * 1/((2*d*e*c)**2) * torch.linalg.norm(a-g) ** 2
+                loss += self.style_weights[l] * 1/((2*d*e*c)**2) * torch.linalg.norm(x) ** 2
             else:
-                loss += self.style_weights[l] * 1/((2*d*e*c)) * torch.sum(torch.abs(a-g))
+                loss += self.style_weights[l] * 1/((2*d*e*c)) * torch.sum(torch.abs(x))
         return loss
 
 

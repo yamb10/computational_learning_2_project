@@ -9,7 +9,7 @@ from total_variation_loss import TotalVariationLoss
 class Trainer:
     def __init__(self, ephoch_num, input_size, criterion, model, device="cuda",
                   random_starts=1, verbose=False, optimizer='lbfgs',
-                  variation_labmda=0, save_every=-1, save_path=None):
+                  variation_labmda=0, save_every=-1, save_path=None, multiple_styles= False):
         self.ephoch_num = ephoch_num
         self.input_size = input_size
         self.criterion = criterion
@@ -18,7 +18,7 @@ class Trainer:
         self.verbose = verbose
         self.optimizer_type = optimizer.lower()
         self.variation_labmda = variation_labmda
-
+        
         self.model = model.to(device)
         self.regularizer = TotalVariationLoss()
 
@@ -30,11 +30,14 @@ class Trainer:
         
         self.save_every = save_every
         self._save_path = save_path
-        
+        self.multiple_styles= multiple_styles 
 
     def train(self, style_image, content_image, start=None):
         loss_values = []
-        style_image = self.transform(style_image).to(self.device)
+        if self.multiple_styles:
+            style_image = torch.cat([self.transform(i) for i in style_image ]).to(self.device)
+        else:
+            style_image = self.transform(style_image).to(self.device)
         content_image = self.transform(content_image).to(self.device)
 
         style_image.requires_grad_(False)
@@ -60,7 +63,7 @@ class Trainer:
             def closure():
                 self.optimizer.zero_grad()
                 outputs = self.model(self.normalize(inputs))
-
+                
                 loss = self.criterion(outputs, style_outputs, content_outputs)
 
                 if self.variation_labmda != 0:
