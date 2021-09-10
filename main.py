@@ -175,8 +175,10 @@ if __name__ == "__main__":
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_368", "Vasiliy_Kandinskiy_67", "Edvard_Munch_12", "Francisco_Goya_79",
     #  "Piet_Mondrian_32", "Pablo_Picasso_416", "Raphael_24"])
 
-    content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
+    # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
+    
+    content_images = filter_images(content_images, ['Lenna', 'tel_aviv'])
 
 
     # multiprocsess_run(content_images, style_images)
