@@ -34,7 +34,7 @@ def run_content_image(content_image, style_images):
 
     model = StyleVGG19(replace_pooling=REPLACE_POOLING)
 
-    trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE[1:], criterion=criterion,
+    trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE, criterion=criterion,
                       model=model, device=DEVICE, random_starts=RANDOM_STARTS,
                       verbose=VERBOSE, optimizer=OPTIMIZER)
 

@@ -5,7 +5,7 @@ from tqdm import trange
 from total_variation_loss import TotalVariationLoss
 
 class Trainer:
-    def ___init__(self, ephoch_num, input_size, criterion, model, device="cuda",
+    def __init__(self, ephoch_num, input_size, criterion, model, device="cuda",
                   random_starts=1, verbose=False, optimizer='lbfgs',
                   variation_labmda=0):
         self.ephoch_num = ephoch_num
@@ -22,7 +22,7 @@ class Trainer:
 
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])  # following the documentation of VGG19
-        self.resize = transforms.Resize(input_size) 
+        self.resize = transforms.Resize(input_size[1:]) 
 
         self.transform = transforms.Compose([self.resize, self.normalize])
         
