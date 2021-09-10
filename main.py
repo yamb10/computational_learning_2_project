@@ -1,4 +1,7 @@
+from math import ceil
+from re import VERBOSE
 import torch
+from torch.optim import optimizer
 from torchvision.models import vgg19
 from torchvision import transforms
 import numpy as np
@@ -15,70 +18,7 @@ from style_vgg19 import StyleVGG19
 from named_image import NamedImage
 from style_transfer_loss import StyleTansferLoss
 from total_variation_loss import TotalVariationLoss
-
-
-
-
-def train(ephoch_num, input_size, criterion, style_image, content_image, device="cuda", random_starts=1, verbose=True):
-
-    inputs = torch.rand([random_starts] + list(input_size),
-                        requires_grad=True, device=device)
-
-    model = StyleVGG19(replace_pooling=REPLACE_POOLING).to(device)
-    regularizer = TotalVariationLoss()
-
-
-    style_image.requires_grad_(False)
-    content_image.requires_grad_(False)
-
-    loss_values = []
-
-    # optimizer = torch.optim.SGD([inputs], lr=1e-5)
-    # criterion = compute_content_loss
-
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])  # following the documentation of VGG19
-
-    transform = transforms.Compose(
-        [transforms.Resize(input_size[1:]), normalize])
-
-    style_image = transform(style_image).to(device)
-    content_image = transform(content_image).to(device)
-
-    optimizer = torch.optim.Adam([inputs], lr=5e-3)
-
-    style_outputs = model(style_image)
-    content_outputs = model(content_image)
-    
-
-    for epcoh_num in trange(ephoch_num, disable=not verbose, ncols=150):
-
-        outputs = model(normalize(inputs))
-
-        loss = criterion(outputs, style_outputs, content_outputs)
-
-        if VARIATION_LAMBDA != 0:
-            loss += VARIATION_LAMBDA * regularizer(inputs)
-
-        loss.backward()
-
-        loss_values.append(loss.item())
-
-        optimizer.step()
-        optimizer.zero_grad()
-
-        with torch.no_grad():
-            inputs.clamp_(0, 1)
-
-
-            #     for i in inputs:
-            #         i.clamp_(0, 255)
-            # if before.equal(inputs):
-            #     raise RuntimeError
-
-    return inputs, loss_values
-
-
+from trainer import Trainer
 
 
 def run_content_image(content_image, style_images):
@@ -92,11 +32,16 @@ def run_content_image(content_image, style_images):
                                                 square_error=SQUARE_ERROR,
                                                 gram_matirx_norm=GRAM_MATRIX_NORM)
 
+    model = StyleVGG19(replace_pooling=REPLACE_POOLING)
+
+    trainer = Trainer(ephoch_num=EPOCH_NUM, input_size=INPUT_SIZE[1:], criterion=criterion,
+                      model=model, device=DEVICE, random_starts=RANDOM_STARTS,
+                      verbose=VERBOSE, optimizer=OPTIMIZER)
+
 
     for style_image in style_images:
 
-        inputs, loss_values = train(EPOCH_NUM, INPUT_SIZE, criterion, style_image.image, content_image.image,
-                                    random_starts=RANDOM_STARTS, verbose=True, device=DEVICE)
+        inputs, loss_values = trainer.train(style_image.image, content_image.image)
 
         plt.rcParams["figure.figsize"] = (16, 9)
 
@@ -177,14 +122,18 @@ if __name__ == "__main__":
 
     GRAM_MATRIX_NORM = True
 
+    OPTIMIZER = 'LBFGS'
+    OPTIMIZER = OPTIMIZER.lower()
+    assert OPTIMIZER in ['lbfgs', 'adam']
     
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
                      "device": DEVICE, "style names": STYLE_NAMES, "content names": CONTENT_NAMES,
-                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
-                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
-                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM}
+                     "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
+                     "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
+                     "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
+                     "optimizer": OPTIMIZER}
 
     date = datetime.today()
 
