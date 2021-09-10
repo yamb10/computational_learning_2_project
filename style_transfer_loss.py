@@ -31,6 +31,7 @@ class StyleTansferLoss(nn.Module):
         self.square_error = square_error
         self.gram_matirx_norm = gram_matirx_norm
         self.imgs_weights= None
+        self.device = device
 
     def gram_matrix(self, A):
         """
