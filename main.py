@@ -21,7 +21,7 @@ from total_variation_loss import TotalVariationLoss
 from trainer import Trainer
 
 
-def run_content_image(content_image, style_images):
+def run_content_image(content_image, style_images, fine_tunning_epoch_num=0):
 
     # assert(set(style_names).issubset(set(layers)))
     # assert(set(content_names).issubset(set(layers)))
@@ -38,6 +38,16 @@ def run_content_image(content_image, style_images):
                       model=model, device=DEVICE, random_starts=RANDOM_STARTS,
                       verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY)
 
+    fine_tunning_criterion = StyleTansferLoss(style_layers=STYLE_NAMES, content_layers=CONTENT_NAMES, 
+                                                alpha=ALPHA, beta=BETA / 100, device=DEVICE, 
+                                                content_weights=CONTENT_WEIGHTS, 
+                                                square_error=SQUARE_ERROR,
+                                                gram_matirx_norm=GRAM_MATRIX_NORM)
+
+    fine_tunning_trainer = Trainer(ephoch_num=fine_tunning_epoch_num, input_size=INPUT_SIZE, criterion=fine_tunning_criterion,
+                      model=model, device=DEVICE, random_starts=RANDOM_STARTS,
+                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY)
+
 
     for style_image in style_images:
 
@@ -46,7 +56,11 @@ def run_content_image(content_image, style_images):
 
         trainer.save_path = os.path.join(folder_name, "training")
 
-        inputs, loss_values = trainer.train(style_image.image, content_image.image)
+        inputs, loss_values1 = trainer.train(style_image.image, content_image.image)
+
+        inputs, loss_values2 = fine_tunning_trainer.train(style_image.image, content_image.image, start=inputs)
+
+        loss_values = loss_values1 + loss_values2
 
         plt.rcParams["figure.figsize"] = (16, 9)
 
@@ -97,10 +111,10 @@ def multiprocsess_run(content_images, style_images):
         p.join()
 
 
-def run(content_images, style_images):
+def run(content_images, style_images, fine_tunning_epoch_num=0):
 
     for img in content_images:
-        run_content_image(img, style_images)
+        run_content_image(img, style_images, fine_tunning_epoch_num)
 
 if __name__ == "__main__":
     EPOCH_NUM = 100
@@ -133,6 +147,8 @@ if __name__ == "__main__":
     BASE_OUTPUT_DIR = "outputs_all" 
 
     PLOT_EVERY = -1
+
+    FINE_TUNNINNG_EPOCH_NUM = 1
     
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
@@ -140,7 +156,8 @@ if __name__ == "__main__":
                      "style weigths":STYLE_WEIGTHS, "content weigths": CONTENT_WEIGHTS, 
                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
-                     "optimizer": OPTIMIZER}
+                     "optimizer": OPTIMIZER, "find tunning epoch num":FINE_TUNNINNG_EPOCH_NUM}
+
 
     date = datetime.today()
 
@@ -183,4 +200,4 @@ if __name__ == "__main__":
 
     # multiprocsess_run(content_images, style_images)
 
-    run(content_images, style_images)
+    run(content_images, style_images, fine_tunning_epoch_num=FINE_TUNNINNG_EPOCH_NUM)
