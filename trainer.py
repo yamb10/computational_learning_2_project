@@ -71,7 +71,7 @@ class Trainer:
             with torch.no_grad():
                 if self.save_every > 0 and epcoh_num % self.save_every == 0:
                     for i, input in enumerate(inputs):
-                        img = transforms.ToPILImage()(input)
+                        img = transforms.ToPILImage()(input.clamp(0, 1))
                         if self.save_path is None:
                             plt.imshow(img)
                         else:
