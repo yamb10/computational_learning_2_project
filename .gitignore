@@ -2,3 +2,6 @@ images/
 resized/
 artists.csv
 best-artworks-of-all-time.zip
+__pycache__/
+outputs_all/
+screenlog.0
