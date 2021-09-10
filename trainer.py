@@ -75,7 +75,7 @@ class Trainer:
                         if self.save_path is None:
                             plt.imshow(img)
                         else:
-                            img.save(os.path.join(self.save_path, f"{i}.png"))
+                            img.save(os.path.join(self.save_path, f"{epcoh_num}_{i}.png"))
                             
 
         with torch.no_grad():
