@@ -1,23 +1,17 @@
-from math import ceil
-from re import VERBOSE
 import torch
-from torch.optim import optimizer
-from torchvision.models import vgg19
 from torchvision import transforms
 import numpy as np
-from tqdm import tqdm, trange
 import matplotlib.pyplot as plt
-from PIL import Image
 import os
 from datetime import datetime
 import json
 import torch.multiprocessing as mp
 
 # from by_layer_model import ByLayerModel
+# from total_variation_loss import TotalVariationLoss
 from style_vgg19 import StyleVGG19
 from named_image import NamedImage
 from style_transfer_loss import StyleTansferLoss
-from total_variation_loss import TotalVariationLoss
 from trainer import Trainer
 
 
@@ -65,13 +59,13 @@ def run_content_image(content_image, style_images, fine_tuning_epoch_num=0):
 
             loss_values = loss_values1 + loss_values2
 
+            plt.rcParams["figure.figsize"] = (16, 9)
+
             plt.semilogy(np.arange(len(loss_values)) + 1,
                         loss_values, label=f"{style_image.name}")
             plt.legend()
             plt.savefig(os.path.join(output_folder,
                         f"{content_image.name}_loss.png"))
-
-
 
             trasform = transforms.ToPILImage()
 
@@ -146,7 +140,7 @@ def run(content_images, style_images, fine_tuning_epoch_num=0):
 
 if __name__ == "__main__":
     EPOCH_NUM = 100
-    INPUT_SIZE = (3, 256, 256)
+    INPUT_SIZE = (3, 512, 512)
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
@@ -177,9 +171,11 @@ if __name__ == "__main__":
 
     PLOT_EVERY = -1
 
-    FINE_TUNINNG_EPOCH_NUM = 1
+    FINE_TUNINNG_EPOCH_NUM = 5
     
-    MULTIPULE_STYLES= True
+    MULTIPULE_STYLES= False
+
+    VERBOSE = True
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
@@ -188,7 +184,7 @@ if __name__ == "__main__":
                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
                      "optimizer": OPTIMIZER, "multipule styles": MULTIPULE_STYLES,
-                    "find tuning epoch num":FINE_TUNINNG_EPOCH_NUM}
+                    "fine tuning epoch num":FINE_TUNINNG_EPOCH_NUM}
 
 
     date = datetime.today()
@@ -206,27 +202,26 @@ if __name__ == "__main__":
     torch.manual_seed(SEED)
 
     CONTENT_FOLDER = "content"
-    STYLE_FOLDER = "style_photos"
-
-
+    # STYLE_FOLDER = "style_photos"
     STYLE_FOLDER = "high_res_styles"
 
     content_images = read_images(CONTENT_FOLDER)
     style_images = read_images(STYLE_FOLDER)
 
-    STYLE_IMGS_WEIGTHS ={"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
+    STYLE_IMGS_WEIGTHS = {"Edvard_Munch_The_Scream" : 0.8 , "Vincent_van_Gogh_The_Starry_Nght" :0.2 } 
+
 
     # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
     # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
 
 
     # content_images = filter_images(content_images, ["stonehenge", "tom"])
-    style_images = filter_images(style_images, ["Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
+    # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
 
     # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
     # style_images = filter_images(style_images, ["Vincent_van_Gogh_69"])
     
-    content_images = filter_images(content_images, ['Lenna', 'tel_aviv'])
+    content_images = filter_images(content_images, ['Lenna', 'tel_aviv', "stonehendge"])
 
 
     # multiprocsess_run(content_images, style_images)

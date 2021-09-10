@@ -31,6 +31,7 @@ class StyleTansferLoss(nn.Module):
         self.square_error = square_error
         self.gram_matirx_norm = gram_matirx_norm
         self.imgs_weights= None
+        self.device = device
 
     def gram_matrix(self, A):
         """
@@ -70,7 +71,7 @@ class StyleTansferLoss(nn.Module):
         if self.imgs_weights is None:
             num_imgs=F[0].shape[0]
             if self.styles_imgs_weights.shape[0] != num_imgs: 
-                imgs_weights = torch.tile(self.styles_imgs_weights,[num_imgs])
+                imgs_weights = torch.ones(num_imgs, device=self.device)
             else:
                 imgs_weights =self.styles_imgs_weights
             self.imgs_weights= (imgs_weights/torch.sum(imgs_weights)).view(-1,1,1,1) # normalize styles weights 
