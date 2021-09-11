@@ -1,10 +1,23 @@
 import os
 from matplotlib import pyplot as plt
+from enum import Enum
 from torchvision import transforms
 import torch
 from tqdm import trange
 
 from total_variation_loss import TotalVariationLoss
+
+class Starting_Place(Enum):
+    RANDOM = 0
+    BLACK = 1
+    WHITE = 2
+    HORIZONTAL_SPLIT = 3
+    VERTICAL_SPLIT = 4
+    CHECKERS = 5
+
+
+
+
 
 class Trainer:
     def __init__(self, ephoch_num, input_size, criterion, model, device="cuda",
@@ -32,7 +45,7 @@ class Trainer:
         self._save_path = save_path
         self.multiple_styles= multiple_styles 
 
-    def train(self, style_image, content_image, start=None):
+    def train(self, style_image, content_image, start=Starting_Place.RANDOM, checkers_num=2):
         loss_values = []
         if self.multiple_styles:
             style_image = torch.cat([self.transform(i) for i in style_image ]).to(self.device)
@@ -46,19 +59,50 @@ class Trainer:
         style_outputs = self.model(style_image)
         content_outputs = self.model(content_image)
 
-        if start is None:
+        dims = [self.random_starts] + list(self.input_size)
+
+        if start == Starting_Place.RANDOM:  
             inputs = torch.rand([self.random_starts] + list(self.input_size),
-                                requires_grad=True, device=self.device)
-        else: 
+                                 requires_grad=True, device=self.device)
+        elif start == Starting_Place.BLACK:
+            inputs = torch.zeros([self.random_starts] + list(self.input_size),
+                                 requires_grad=True, device=self.device)
+        elif start == Starting_Place.WHITE:
+            inputs = torch.ones([self.random_starts] + list(self.input_size),
+                                 requires_grad=True, device=self.device)
+        elif start == Starting_Place.HORIZONTAL_SPLIT or start == Starting_Place.VERTICAL_SPLIT:
+            if  start == Starting_Place.HORIZONTAL_SPLIT:
+                axis = 2
+            else:
+                axis = 3
+            dims[axis] //= 2 
+            white = torch.ones(dims,requires_grad=False, device=self.device)
+            black = torch.zeros(dims,requires_grad=False, device=self.device)
+            inputs =  torch.cat([white, black], dim=axis)
+            inputs.requires_grad_(True)
+
+        elif start == Starting_Place.CHECKERS:
+            assert all(dims[i] % checkers_num == 0 for i in [2,3]) 
+            block_size = (dims[2] // checkers_num,  dims[3] // checkers_num)
+            checkers_num //= 2
+            inputs = torch.kron(torch.Tensor([[1, 0] * checkers_num, [0, 1] * checkers_num] * checkers_num), torch.ones(block_size))
+ 
+
+            inputs = inputs.repeat(dims[:2] + [1,1])
+            
+            inputs = inputs.detach().to(device=self.device).requires_grad_() 
+            
+        else:
             inputs = start
             # assert(all(x == y for x, y in zip(inputs.shape[1:], self.input_size)))
+
 
         if self.optimizer_type == 'adam':
             self.optimizer = torch.optim.Adam([inputs])
         elif self.optimizer_type == 'lbfgs':
             self.optimizer = torch.optim.LBFGS([inputs])
 
-        for epcoh_num in trange(self.ephoch_num, disable=not self.verbose, ncols=150):
+        for epoch_num in trange(self.ephoch_num, disable=not self.verbose, ncols=150):
             
             def closure():
                 self.optimizer.zero_grad()
@@ -73,17 +117,17 @@ class Trainer:
                 loss_values.append(loss.item())
                 return loss
 
-            self.optimizer.step(closure)
 
             with torch.no_grad():
-                if self.save_every > 0 and epcoh_num % self.save_every == 0:
+                if self.save_every > 0 and (epoch_num % self.save_every == 0 or (self.ephoch_num == (epoch_num + 1))):
                     for i, input in enumerate(inputs):
                         img = transforms.ToPILImage()(input.clamp(0, 1))
                         if self.save_path is None:
                             plt.imshow(img)
                         else:
-                            img.save(os.path.join(self.save_path, f"{epcoh_num}_{i}.png"))
+                            img.save(os.path.join(self.save_path, f"{epoch_num}_{i}.png"))
                             
+            self.optimizer.step(closure)
 
         with torch.no_grad():
             inputs.clamp_(0, 1)
