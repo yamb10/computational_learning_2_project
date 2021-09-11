@@ -6,13 +6,14 @@ import os
 from datetime import datetime
 import json
 import torch.multiprocessing as mp
+import sys
 
 # from by_layer_model import ByLayerModel
 # from total_variation_loss import TotalVariationLoss
 from style_vgg19 import StyleVGG19
 from named_image import NamedImage
 from style_transfer_loss import StyleTansferLoss
-from trainer import Trainer
+from trainer import Starting_Place, Trainer
 
 
 def run_content_image(content_image, style_images, fine_tuning_epoch_num=0):
@@ -40,7 +41,7 @@ def run_content_image(content_image, style_images, fine_tuning_epoch_num=0):
 
     fine_tuning_trainer = Trainer(ephoch_num=fine_tuning_epoch_num, input_size=INPUT_SIZE, criterion=fine_tuning_criterion,
                       model=model, device=DEVICE, random_starts=RANDOM_STARTS, variation_labmda=VARIATION_LAMBDA,
-                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=PLOT_EVERY, multiple_styles=MULTIPULE_STYLES)
+                      verbose=VERBOSE, optimizer=OPTIMIZER, save_every=1, multiple_styles=MULTIPULE_STYLES)
 
 
     if not MULTIPULE_STYLES: 
@@ -53,8 +54,10 @@ def run_content_image(content_image, style_images, fine_tuning_epoch_num=0):
             trainer.save_path = os.path.join(folder_name, "training")
 
 
-            inputs, loss_values1 = trainer.train(style_image.image, content_image.image)
+            inputs, loss_values1 = trainer.train(style_image.image, content_image.image, start=start)
 
+
+            fine_tuning_trainer.save_path = os.path.join(folder_name, "fine-tuning")
             inputs, loss_values2 = fine_tuning_trainer.train(style_image.image, content_image.image, start=inputs)
 
             loss_values = loss_values1 + loss_values2
@@ -144,7 +147,7 @@ if __name__ == "__main__":
     SEED = 6643527
     RANDOM_STARTS = 1
     ALPHA = 1
-    BETA = 1e9
+    BETA = 7.5e4  # 1e9
     DEVICE = "cuda"
     STYLE_WEIGTHS = {'conv1_1' : 0.2,
                      'conv2_1' : 0.2,
@@ -158,9 +161,11 @@ if __name__ == "__main__":
 
     VARIATION_LAMBDA = 1
     REPLACE_POOLING = True
-    SQUARE_ERROR = True
+    SQUARE_ERROR = False
 
     GRAM_MATRIX_NORM = False
+
+    STARTING_PLACE = ""
 
 
     OPTIMIZER = 'lbfgs'
@@ -169,13 +174,19 @@ if __name__ == "__main__":
 
     BASE_OUTPUT_DIR = "outputs_all" 
 
-    PLOT_EVERY = -1
+    PLOT_EVERY = 20
 
-    FINE_TUNINNG_EPOCH_NUM = 0
+    FINE_TUNINNG_EPOCH_NUM = 5
     
     MULTIPULE_STYLES= False
 
     VERBOSE = True
+
+
+    start = Starting_Place.CHECKERS
+    
+
+    # _, GRAM_MATRIX_NORM, FINE_TUNINNG_EPOCH_NUM, SQUARE_ERROR = sys.argv[0], bool(int(sys.argv[1])), int(sys.argv[2]), bool(int(sys.argv[3]))
 
     configuration = {"epoch num": EPOCH_NUM, "input size": INPUT_SIZE, "SEED": SEED,
                      "RANDOM STARTS": RANDOM_STARTS, "ALPHA": ALPHA, "BETA": BETA, 
@@ -184,7 +195,7 @@ if __name__ == "__main__":
                      "variation lambda": VARIATION_LAMBDA, "replace pooling": REPLACE_POOLING,
                      "square error": SQUARE_ERROR, "gram matrix norm": GRAM_MATRIX_NORM, 
                      "optimizer": OPTIMIZER, "multipule styles": MULTIPULE_STYLES,
-                    "fine tuning epoch num":FINE_TUNINNG_EPOCH_NUM}
+                    "fine tuning epoch num":FINE_TUNINNG_EPOCH_NUM, "start": str(start)}
 
 
     date = datetime.today()
@@ -212,16 +223,16 @@ if __name__ == "__main__":
 
 
     # content_images = filter_images(content_images, ["stonehenge",  "tom", "tel_aviv"])
-    style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
+    # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream"])
 
 
     # content_images = filter_images(content_images, ["stonehenge", "tom"])
     # style_images = filter_images(style_images, ["Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
 
     # content_images = filter_images(content_images, ['tom', 'boxing', 'obama', 'jumping_dog'])
-    # style_images = filter_images(style_images, ["Francisco_Goya_79"])
+    style_images = filter_images(style_images, ["Gustav_Klimt_9", "Vasiliy_Kandinskiy_67", "Edvard_Munch_The_Scream", "Vincent_van_Gogh_The_Starry_Nght"])
     
-    content_images = filter_images(content_images, [ 'tel_aviv']) # 'Lenna',, "stonehendge"
+    content_images = filter_images(content_images, ['Lenna', 'tel_aviv', "stonehendge"]) # 'Lenna',, "stonehendge"
 
 
     # multiprocsess_run(content_images, style_images)
